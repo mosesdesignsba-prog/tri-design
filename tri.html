@@ -2716,6 +2716,8 @@ function getAllBackupData(){
 }
 
 function initBackupPage(){
+  // تفعيل Firebase تلقائياً عند فتح صفحة الـ backup
+  if(!_fbReady) autoInitFirebase();
   // Summary
   const data=getAllBackupData();
   const users=loadUsers();
@@ -3484,11 +3486,22 @@ function updateFirebaseStatus(connected){
 function renderFirebaseConfigSection(){
   const backup=document.getElementById('page-4');
   if(!backup) return;
-  // Check if section already added
   if(document.getElementById('fb-config-card')) return;
 
+  // استخدم البيانات المدمجة مباشرة
+  const BUILT_IN = {
+    apiKey:            "AIzaSyC19ZdEB0w08LzK87V6ikuOovUJ7FedyVGg",
+    authDomain:        "mrseif.firebaseapp.com",
+    databaseURL:       "https://mrseif-default-rtdb.firebaseio.com",
+    projectId:         "mrseif",
+    storageBucket:     "mrseif.firebasestorage.app",
+    messagingSenderId: "800158639089",
+    appId:             "1:800158639089:web:859636130d6f1a5a929a50"
+  };
   const saved=localStorage.getItem('tri_fb_config');
-  const cfg=saved?JSON.parse(saved):{};
+  const cfg=saved?{...BUILT_IN,...JSON.parse(saved)}:BUILT_IN;
+  // احفظها في localStorage تلقائياً
+  localStorage.setItem('tri_fb_config', JSON.stringify(cfg));
 
   const card=document.createElement('div');
   card.id='fb-config-card';
