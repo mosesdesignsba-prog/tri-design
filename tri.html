@@ -2743,6 +2743,12 @@ function initBackupPage(){
 }
 
 function exportBackup(){
+  // Force save current state before export
+  try{
+    const ab=loadAbout(); saveAbout(ab);
+    saveUsers(USERS);
+    const emps=loadEmployees(); saveEmployees(emps);
+  }catch(e){}
   const data=getAllBackupData();
   const now=new Date();
   const dateStr=now.toISOString().slice(0,19).replace(/[T:]/g,'-');
@@ -2783,7 +2789,10 @@ function importBackup(event){
       statusEl.innerHTML=`✅ تم الاستيراد بنجاح! تمت استعادة <strong>${keys.length}</strong> مفتاح بيانات.<br>
         <span style="font-size:12px;opacity:.8">سيتم إعادة تحميل الصفحة خلال 3 ثوانٍ...</span>`;
       showToast('تم استيراد البيانات بنجاح ✓');
-      setTimeout(()=>window.location.reload(),3000);
+      setTimeout(()=>{
+        // Force reload without cache
+        window.location.href = window.location.href.split('?')[0] + '?imported=' + Date.now();
+      },1500);
     }catch(err){
       statusEl.style.display='block';
       statusEl.style.background='rgba(239,68,68,.12)';
@@ -3591,26 +3600,38 @@ function pullAllFromFirebase(){
 
 // ── Auto-init Firebase from saved config ──
 function autoInitFirebase(){
-  const saved=localStorage.getItem('tri_fb_config');
-  if(!saved) return;
+  // ── بيانات Firebase مدمجة مباشرة ──
+  const BUILT_IN_CONFIG = {
+    apiKey:            "AIzaSyC19ZdEB0w08LzK87V6ikuOovUJ7FedyVGg",
+    authDomain:        "mrseif.firebaseapp.com",
+    databaseURL:       "https://mrseif-default-rtdb.firebaseio.com",
+    projectId:         "mrseif",
+    storageBucket:     "mrseif.firebasestorage.app",
+    messagingSenderId: "800158639089",
+    appId:             "1:800158639089:web:859636130d6f1a5a929a50"
+  };
+  // استخدم البيانات المدمجة أو المحفوظة في localStorage
+  let cfg = BUILT_IN_CONFIG;
   try{
-    const cfg=JSON.parse(saved);
-    if(!cfg.apiKey||!cfg.databaseURL) return;
-    // Load Firebase SDK dynamically
-    function loadFB(){
-      if(typeof firebase!=='undefined'){ initFBWithConfig(cfg); return; }
-      const s1=document.createElement('script');
-      s1.src='https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js';
-      s1.onload=function(){
-        const s2=document.createElement('script');
-        s2.src='https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js';
-        s2.onload=function(){ initFBWithConfig(cfg); };
-        document.head.appendChild(s2);
-      };
-      document.head.appendChild(s1);
-    }
-    loadFB();
+    const saved=localStorage.getItem('tri_fb_config');
+    if(saved){ const sc=JSON.parse(saved); if(sc.apiKey) cfg=sc; }
   }catch(e){}
+  // حفظ في localStorage للاستخدام لاحقاً
+  localStorage.setItem('tri_fb_config', JSON.stringify(cfg));
+  // تحميل Firebase SDK ديناميكياً
+  function loadFB(){
+    if(typeof firebase!=='undefined'){ initFBWithConfig(cfg); return; }
+    const s1=document.createElement('script');
+    s1.src='https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js';
+    s1.onload=function(){
+      const s2=document.createElement('script');
+      s2.src='https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js';
+      s2.onload=function(){ initFBWithConfig(cfg); };
+      document.head.appendChild(s2);
+    };
+    document.head.appendChild(s1);
+  }
+  loadFB();
 }
 function initFBWithConfig(cfg){
   try{
